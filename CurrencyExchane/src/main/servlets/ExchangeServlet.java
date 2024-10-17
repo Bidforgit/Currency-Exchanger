@@ -2,7 +2,6 @@ package main.servlets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -11,10 +10,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import main.services.CurrencyService;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 
-@WebServlet("/exchangeRate/*")  // Handle requests for /currency/{code}
+@WebServlet("/exchange/*")
 public class ExchangeServlet extends HttpServlet {
 
     private CurrencyService currencyService;
@@ -36,6 +34,12 @@ public class ExchangeServlet extends HttpServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+
+        String baseCurrency = request.getParameter("baseCurrency");
+        String targetCurrency = request.getParameter("targetCurrency");
+        String amount = request.getParameter("amount");
+
+
 
         if (pathInfo == null || pathInfo.equals("/")) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");

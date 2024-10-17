@@ -9,22 +9,23 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import main.services.CurrencyService;
+import main.services.ExchangeRateService;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 
-@WebServlet("/currencies")  // Handle requests for /currency/{code}
-public class CurrenciesServlet extends HttpServlet {
+@WebServlet("/exchangeRate/*")
+public class ExchangeRateServlet extends HttpServlet {
 
-    private CurrencyService currencyService;
+    private ExchangeRateService exchangeRateService;
     private ObjectMapper objectMapper;
 
 
     @Override
     public void init() throws ServletException {
         super.init();
-        currencyService = new CurrencyService();
+        exchangeRateService = new ExchangeRateService();
         objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
@@ -32,15 +33,20 @@ public class CurrenciesServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String pathInfo = request.getPathInfo();
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-
-        try {
-            String json = objectMapper.writeValueAsString(currencyService.getAllCurrencies());
-            response.getWriter().write(json);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        if (pathInfo == null || pathInfo.equals("/")) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
+        } else {
+            String currencyPair = pathInfo.substring(1);
+            try {
+                String json = objectMapper.writeValueAsString(exchangeRateService.getExchangeRateByCourse(currencyPair));
+                response.getWriter().write(json);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
 
     }
@@ -56,13 +62,13 @@ public class CurrenciesServlet extends HttpServlet {
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        try {
-            String json = objectMapper.writeValueAsString(currencyService.insertCurrency(code, name,sign));
-            response.getWriter().write(json);
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+////            String json = objectMapper.writeValueAsString(exchangeRateService.insert(code, name,sign));
+////            response.getWriter().write(json);
+//
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
 
     }
 }

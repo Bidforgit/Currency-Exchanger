@@ -14,16 +14,23 @@ public class CurrencyService {
 
     private DatabaseConfig db;
 
-    public void insertCurrency(int id, String code, String fullName, String sign) throws SQLException {
-        String sql = "INSERT INTO currencies(id, code, fullName, sign) VALUES(?,?,?,?)";
+    public Currency insertCurrency(String code, String fullName, String sign) throws SQLException {
+        String sql = "INSERT INTO currencies(code, fullName, sign) VALUES(?,?,?) RETURNING * ";
 
         try (Connection conn = DatabaseConfig.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            pstmt.setString(2, code);
-            pstmt.setString(3, fullName);
-            pstmt.setString(4, sign);
-            pstmt.executeUpdate();
+            pstmt.setString(1, code);
+            pstmt.setString(2, fullName);
+            pstmt.setString(3, sign);
+
+            ResultSet rs = pstmt.executeQuery();
+            Currency currency = new Currency();
+            currency.setId(rs.getInt("id"));
+            currency.setCode(rs.getString("code"));
+            currency.setFullName(rs.getString("fullName"));
+            currency.setSign(rs.getString("sign"));
+            return currency;
+
         }
     }
 
@@ -50,6 +57,31 @@ public class CurrencyService {
             }
         }
     }
+
+    public Currency calculateExchangeRates(String currencyCode) throws SQLException {
+        String sql = "SELECT id, code, fullName, sign FROM currencies WHERE code = ?";
+
+        try (Connection conn = DatabaseConfig.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, currencyCode);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    Currency currency = new Currency();
+                    currency.setId(rs.getInt("id"));
+                    currency.setCode(rs.getString("code"));
+                    currency.setFullName(rs.getString("fullName"));
+                    currency.setSign(rs.getString("sign"));
+                    return currency;
+                } else {
+                    // Currency not found
+                    return null; // Or throw an exception if preferred
+                }
+            }
+        }
+    }
+
 
     public List<Currency> getAllCurrencies() throws SQLException {
         List<Currency> currencies = new ArrayList<>();
