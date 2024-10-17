@@ -8,21 +8,23 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import main.services.CurrencyService;
+import main.services.ExchangeRateService;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 
 @WebServlet("/exchange/*")
 public class ExchangeServlet extends HttpServlet {
 
-    private CurrencyService currencyService;
+    private ExchangeRateService exchangeRateService;
     private ObjectMapper objectMapper;
 
 
     @Override
     public void init() throws ServletException {
         super.init();
-        currencyService = new CurrencyService();
+        exchangeRateService = new ExchangeRateService();
         objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
@@ -30,28 +32,28 @@ public class ExchangeServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String pathInfo = request.getPathInfo();
+//        String pathInfo = request.getPathInfo();
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String baseCurrency = request.getParameter("baseCurrency");
-        String targetCurrency = request.getParameter("targetCurrency");
-        String amount = request.getParameter("amount");
+        String baseCurrencyCode = request.getParameter("baseCurrency");
+        String targetCurrencyCode = request.getParameter("targetCurrency");
+        String amountStr = request.getParameter("amount");
 
 
 
-        if (pathInfo == null || pathInfo.equals("/")) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
-        } else {
-            // Extract the currency code from the URL
-            String currencyCode = pathInfo.substring(1);  // Remove leading slash
+//        if (pathInfo == null || pathInfo.equals("/")) {
+//            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
+//        } else {
             try {
-                String json = objectMapper.writeValueAsString(currencyService.getCurrencyByCode(currencyCode));
+                BigDecimal amount = BigDecimal.valueOf(Double.parseDouble(amountStr));
+
+                String json = objectMapper.writeValueAsString(exchangeRateService.calculateExchangeRates(baseCurrencyCode, targetCurrencyCode, amount));
                 response.getWriter().write(json);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-        }
+//        }
     }
 }

@@ -58,31 +58,6 @@ public class CurrencyService {
         }
     }
 
-    public Currency calculateExchangeRates(String currencyCode) throws SQLException {
-        String sql = "SELECT id, code, fullName, sign FROM currencies WHERE code = ?";
-
-        try (Connection conn = DatabaseConfig.connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, currencyCode);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    Currency currency = new Currency();
-                    currency.setId(rs.getInt("id"));
-                    currency.setCode(rs.getString("code"));
-                    currency.setFullName(rs.getString("fullName"));
-                    currency.setSign(rs.getString("sign"));
-                    return currency;
-                } else {
-                    // Currency not found
-                    return null; // Or throw an exception if preferred
-                }
-            }
-        }
-    }
-
-
     public List<Currency> getAllCurrencies() throws SQLException {
         List<Currency> currencies = new ArrayList<>();
         String sql = "SELECT id, code, fullName, sign FROM currencies";

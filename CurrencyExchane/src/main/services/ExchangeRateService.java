@@ -6,6 +6,7 @@ import main.models.Currency;
 
 import javax.xml.crypto.Data;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -207,5 +208,86 @@ public class ExchangeRateService {
         }
     }
 
+
+
+    public ExchangeRateWithCurrencies calculateExchangeRates(String baseCurrencyCode, String targetCurrencyCode, BigDecimal amount) throws SQLException {
+            String sql = "SELECT " +
+                    "er.id AS exchange_rate_id, " +
+                    "c1.id AS base_currency_id, c1.code AS base_currency_code, c1.fullName AS base_currency_fullName, c1.sign AS base_currency_sign, " +
+                    "c2.id AS target_currency_id, c2.code AS target_currency_code, c2.fullName AS target_currency_fullName, c2.sign AS target_currency_sign, " +
+                    "er.Rate, 'forward' AS direction " +
+                    "FROM ExchangeRates er " +
+                    "JOIN currencies c1 ON er.baseCurrencyId = c1.id " +
+                    "JOIN currencies c2 ON er.TargetCurrencyId = c2.id " +
+                    "WHERE c1.code = ? AND c2.code = ? " + // base -> target
+
+                    "UNION " +
+
+                    "SELECT " +
+                    "er.id AS exchange_rate_id, " +
+                    "c2.id AS base_currency_id, c2.code AS base_currency_code, c2.fullName AS base_currency_fullName, c2.sign AS base_currency_sign, " +
+                    "c1.id AS target_currency_id, c1.code AS target_currency_code, c1.fullName AS target_currency_fullName, c1.sign AS target_currency_sign, " +
+                    "er.Rate, 'reverse' AS direction " +
+                    "FROM ExchangeRates er " +
+                    "JOIN currencies c1 ON er.baseCurrencyId = c1.id " +
+                    "JOIN currencies c2 ON er.TargetCurrencyId = c2.id " +
+                    "WHERE c1.code = ? AND c2.code = ?";
+
+            try (Connection conn = DatabaseConfig.connect();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, baseCurrencyCode);
+                pstmt.setString(2, targetCurrencyCode);
+                pstmt.setString(3, targetCurrencyCode); // For reverse part of the UNION
+                pstmt.setString(4, baseCurrencyCode);   // For reverse part of the UNION
+
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    // Base currency (from)
+                    Currency baseCurr = new Currency();
+                    baseCurr.setId(rs.getInt("base_currency_id"));
+                    baseCurr.setCode(rs.getString("base_currency_code"));
+                    baseCurr.setFullName(rs.getString("base_currency_fullName"));
+                    baseCurr.setSign(rs.getString("base_currency_sign"));
+
+                    // Target currency (to)
+                    Currency targetCurr = new Currency();
+                    targetCurr.setId(rs.getInt("target_currency_id"));
+                    targetCurr.setCode(rs.getString("target_currency_code"));
+                    targetCurr.setFullName(rs.getString("target_currency_fullName"));
+                    targetCurr.setSign(rs.getString("target_currency_sign"));
+
+
+                    ExchangeRateWithCurrencies exchangeRateWithCurrencies = new ExchangeRateWithCurrencies();
+
+                    String direction = rs.getString("direction");
+                    if ("reverse".equals(direction)) {
+                        exchangeRateWithCurrencies.setRate(BigDecimal.valueOf(1).divide(rs.getBigDecimal("Rate")));
+                    } else {
+                        exchangeRateWithCurrencies.setRate(rs.getBigDecimal("Rate"));
+                    }
+//                    exchangeRateWithCurrencies.setRate(
+//                            BigDecimal.valueOf(1)
+//                                    .divide(rs.getBigDecimal("Rate"), 2, RoundingMode.HALF_UP) // 6 is the scale, adjust as needed
+//                    );
+
+                    exchangeRateWithCurrencies.setBaseCurrency(baseCurr);
+                    exchangeRateWithCurrencies.setTargetCurrency(targetCurr);
+                    exchangeRateWithCurrencies.setConvertedAmount(exchangeRateWithCurrencies.getRate().multiply(amount));
+
+
+                    try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            exchangeRateWithCurrencies.setId(generatedKeys.getLong(1));
+                        }
+                    }
+
+                    return exchangeRateWithCurrencies;
+                }
+            }
+
+            return null;
+
+    }
 
 }

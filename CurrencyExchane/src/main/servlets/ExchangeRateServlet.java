@@ -51,24 +51,5 @@ public class ExchangeRateServlet extends HttpServlet {
 
     }
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        String name = request.getParameter("name");
-        String code = request.getParameter("code");
-        String sign = request.getParameter("sign");
-
-//        try {
-////            String json = objectMapper.writeValueAsString(exchangeRateService.insert(code, name,sign));
-////            response.getWriter().write(json);
-//
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
-
-    }
 }
