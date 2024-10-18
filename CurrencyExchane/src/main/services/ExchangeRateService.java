@@ -290,4 +290,67 @@ public class ExchangeRateService {
 
     }
 
+    public ExchangeRateWithCurrencies updateCurrencyRate(String pathInfo, BigDecimal rate) throws SQLException {
+
+        String baseCurrencyCode = pathInfo.substring(0, 3);  // USD
+        String targetCurrencyCode = pathInfo.substring(3, 6);  // KZT
+
+        try (Connection connection = DatabaseConfig.connect()) {
+            connection.setAutoCommit(false);
+
+            Currency baseCurrency = getCurrencyByCode(baseCurrencyCode);
+            Currency targetCurrency = getCurrencyByCode(targetCurrencyCode);
+
+            if (baseCurrency == null) {
+                throw new SQLException("Base currency not found: " + baseCurrencyCode);
+            }
+
+            if (targetCurrency == null) {
+                throw new SQLException("Target currency not found: " + targetCurrencyCode);
+            }
+
+            // Check if the exchange rate already exists
+            if (exchangeRateExists(baseCurrency.getId(), targetCurrency.getId())) {
+                throw new SQLException("Exchange rate for this currency pair already exists");
+            }
+            ExchangeRateWithCurrencies exchangeRateWithCurrencies = new ExchangeRateWithCurrencies();
+            String sql = "UPDATE ExchangeRates SET rate = ? WHERE baseCurrencyId = " +
+                    "(SELECT id FROM currencies WHERE code = ?) AND targetCurrencyId = " +
+                    "(SELECT id FROM currencies WHERE code = ?)";
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setBigDecimal(1, rate);
+                pstmt.setString(2, baseCurrency.getCode());
+                pstmt.setString(3,targetCurrency.getCode());
+                pstmt.executeUpdate();
+
+                int affectedRows = pstmt.executeUpdate();
+
+                if (affectedRows == 0) {
+                    throw new SQLException("Inserting exchange rate failed, no rows affected.");
+                }
+
+                // Retrieve the generated key (e.g., the new ID)
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        exchangeRateWithCurrencies.setId(generatedKeys.getLong(1));
+                    } else {
+                        throw new SQLException("Inserting exchange rate failed, no ID obtained.");
+                    }
+                }
+            }
+
+            connection.commit();
+
+
+            exchangeRateWithCurrencies.setRate(rate);
+            exchangeRateWithCurrencies.setBaseCurrency(baseCurrency);
+            exchangeRateWithCurrencies.setTargetCurrency(targetCurrency);
+            return exchangeRateWithCurrencies;
+        } catch (SQLException e) {
+//            connection.rollback();
+            throw e;
+        } finally {
+//            connection.setAutoCommit(true);
+        }
+    }
 }

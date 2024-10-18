@@ -2,17 +2,15 @@ package main.servlets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import main.services.CurrencyService;
 import main.services.ExchangeRateService;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 
 @WebServlet("/exchangeRate/*")
@@ -51,5 +49,56 @@ public class ExchangeRateServlet extends HttpServlet {
 
     }
 
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json");
+        resp.setCharacterEncoding("UTF-8");
+        if (req.getRequestURI().matches("/exchangeRate/\\w+")) {
 
+            String pathInfo = req.getPathInfo();
+            String rateStr = req.getParameter("rate");
+
+            if (rateStr == null) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("Missing rate");
+                return;
+            }
+            if (pathInfo == null || pathInfo.equals("/")) {
+                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
+            } else {
+                try {
+                    BigDecimal rate = new BigDecimal(rateStr);
+
+
+                    String json = objectMapper.writeValueAsString(exchangeRateService.updateCurrencyRate(pathInfo, rate));
+                    resp.getWriter().write(json);
+
+//            if (success) {
+//                resp.setStatus(HttpServletResponse.SC_OK);
+//                resp.getWriter().write("Currency pair updated successfully");
+//            } else {
+//                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+//                resp.getWriter().write("Currency pair not found");
+//            }
+                } catch (NumberFormatException e) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    resp.getWriter().write("Invalid rate format");
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    resp.getWriter().write("Failed to update currency pair");
+                }
+            }
+        }
+
+//    @Override
+//    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+//        String method = req.getMethod();
+//        if (!method.equals("PATCH")) {
+//            super.service(req, resp);
+//        } else {
+//            this.doPatch(req, resp);
+//        }
+//    }
+
+    }
 }

@@ -12,5 +12,14 @@
 		<filter-name>CORS</filter-name>
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
+<!--	<servlet>-->
+<!--		<servlet-name>ExchangeRateServlet</servlet-name>-->
+<!--		<servlet-class>main.servlets.ExchangeRateServlet</servlet-class>-->
+<!--	</servlet>-->
+
+<!--	<servlet-mapping>-->
+<!--		<servlet-name>ExchangeRateServlet</servlet-name>-->
+<!--		<url-pattern>/exchangeRate/*</url-pattern>-->
+<!--	</servlet-mapping>-->
 
 </web-app>
