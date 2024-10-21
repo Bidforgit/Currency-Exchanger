@@ -2,7 +2,6 @@ package main.servlets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -11,10 +10,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import main.services.CurrencyService;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 
-@WebServlet("/currencies")  // Handle requests for /currency/{code}
+@WebServlet("/currencies")
 public class CurrenciesServlet extends HttpServlet {
 
     private CurrencyService currencyService;
@@ -57,7 +55,7 @@ public class CurrenciesServlet extends HttpServlet {
         String sign = request.getParameter("sign");
 
         try {
-            String json = objectMapper.writeValueAsString(currencyService.insertCurrency(code, name,sign));
+            String json = objectMapper.writeValueAsString(currencyService.insertCurrency(code, name, sign));
             response.getWriter().write(json);
 
         } catch (SQLException e) {

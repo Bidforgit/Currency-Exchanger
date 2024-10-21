@@ -29,6 +29,19 @@ public class ExchangeRateServlet extends HttpServlet {
     }
 
     @Override
+    protected void service(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        if (request.getMethod().equalsIgnoreCase("PATCH")) {
+            // Handle PATCH request
+            doPatch(request, response);
+        } else {
+            // Delegate to super class for other HTTP methods (GET, POST, etc.)
+            super.service(request, response);
+        }
+    }
+
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String pathInfo = request.getPathInfo();
@@ -49,28 +62,29 @@ public class ExchangeRateServlet extends HttpServlet {
 
     }
 
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
-        if (req.getRequestURI().matches("/exchangeRate/\\w+")) {
 
-            String pathInfo = req.getPathInfo();
-            String rateStr = req.getParameter("rate");
+        String pathInfo = req.getPathInfo();
+        String rateStr = req.getParameter("rate");
 
-            if (rateStr == null) {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                resp.getWriter().write("Missing rate");
-                return;
-            }
-            if (pathInfo == null || pathInfo.equals("/")) {
-                resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
-            } else {
-                try {
-                    BigDecimal rate = new BigDecimal(rateStr);
+        if (rateStr == null) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().write("Missing rate");
+            return;
+        }
+        if (pathInfo == null || pathInfo.equals("/")) {
+            resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
+        } else {
+            try {
+                pathInfo = pathInfo.substring(1);  // Remove leading slash
+
+                BigDecimal rate = new BigDecimal(rateStr);
 
 
-                    String json = objectMapper.writeValueAsString(exchangeRateService.updateCurrencyRate(pathInfo, rate));
-                    resp.getWriter().write(json);
+                String json = objectMapper.writeValueAsString(exchangeRateService.updateCurrencyRate(pathInfo, rate));
+                resp.getWriter().write(json);
 
 //            if (success) {
 //                resp.setStatus(HttpServletResponse.SC_OK);
@@ -79,26 +93,15 @@ public class ExchangeRateServlet extends HttpServlet {
 //                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
 //                resp.getWriter().write("Currency pair not found");
 //            }
-                } catch (NumberFormatException e) {
-                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    resp.getWriter().write("Invalid rate format");
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                    resp.getWriter().write("Failed to update currency pair");
-                }
+            } catch (NumberFormatException e) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                resp.getWriter().write("Invalid rate format");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                resp.getWriter().write("Failed to update currency pair");
             }
+
         }
-
-//    @Override
-//    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-//        String method = req.getMethod();
-//        if (!method.equals("PATCH")) {
-//            super.service(req, resp);
-//        } else {
-//            this.doPatch(req, resp);
-//        }
-//    }
-
     }
 }

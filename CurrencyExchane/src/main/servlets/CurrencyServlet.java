@@ -40,7 +40,7 @@ public class CurrencyServlet extends HttpServlet {
         if (pathInfo == null || pathInfo.equals("/")) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
         } else {
-            // Extract the currency code from the URL
+
             String currencyCode = pathInfo.substring(1);  // Remove leading slash
             try {
                 String json = objectMapper.writeValueAsString(currencyService.getCurrencyByCode(currencyCode));

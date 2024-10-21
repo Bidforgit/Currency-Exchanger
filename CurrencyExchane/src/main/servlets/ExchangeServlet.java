@@ -7,7 +7,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import main.services.CurrencyService;
 import main.services.ExchangeRateService;
 
 import java.io.IOException;
@@ -32,28 +31,22 @@ public class ExchangeServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-//        String pathInfo = request.getPathInfo();
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String baseCurrencyCode = request.getParameter("baseCurrency");
-        String targetCurrencyCode = request.getParameter("targetCurrency");
+        String baseCurrencyCode = request.getParameter("from");
+        String targetCurrencyCode = request.getParameter("to");
         String amountStr = request.getParameter("amount");
 
+        try {
+            BigDecimal amount = BigDecimal.valueOf(Double.parseDouble(amountStr));
 
+            String json = objectMapper.writeValueAsString(exchangeRateService.calculateExchangeRates(baseCurrencyCode, targetCurrencyCode, amount));
+            response.getWriter().write(json);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
-//        if (pathInfo == null || pathInfo.equals("/")) {
-//            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
-//        } else {
-            try {
-                BigDecimal amount = BigDecimal.valueOf(Double.parseDouble(amountStr));
-
-                String json = objectMapper.writeValueAsString(exchangeRateService.calculateExchangeRates(baseCurrencyCode, targetCurrencyCode, amount));
-                response.getWriter().write(json);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-//        }
     }
 }

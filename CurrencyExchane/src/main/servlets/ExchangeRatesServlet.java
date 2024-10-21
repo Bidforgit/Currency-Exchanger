@@ -51,8 +51,8 @@ public class ExchangeRatesServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        String baseCurrency = request.getParameter("baseCurrency");
-        String targetCurrency = request.getParameter("targetCurrency");
+        String baseCurrency = request.getParameter("baseCurrencyCode");
+        String targetCurrency = request.getParameter("targetCurrencyCode");
         BigDecimal rate = BigDecimal.valueOf(Long.parseLong(request.getParameter("rate")));
 
         try {
