@@ -1,6 +1,8 @@
 package main.services;
 
 import main.DatabaseConfig;
+import main.exceptions.CurrencyAlreadyExistsException;
+import main.exceptions.CurrencyNotFoundException;
 import main.models.Currency;
 
 import java.sql.Connection;
@@ -17,7 +19,7 @@ public class CurrencyService {
     public Currency insertCurrency(String code, String fullName, String sign) throws SQLException {
         String sql = "INSERT INTO currencies(code, fullName, sign) VALUES(?,?,?) RETURNING * ";
 
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, code);
             pstmt.setString(2, fullName);
@@ -31,13 +33,18 @@ public class CurrencyService {
             currency.setSign(rs.getString("sign"));
             return currency;
 
+        } catch (SQLException e) {
+            if (e.getMessage().contains("SQLITE_CONSTRAINT_UNIQUE")) {
+                throw new CurrencyAlreadyExistsException("Currency already exist");
+            }
         }
+        return null;
     }
 
     public Currency getCurrencyByCode(String currencyCode) throws SQLException {
         String sql = "SELECT id, code, fullName, sign FROM currencies WHERE code = ?";
 
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, currencyCode);
@@ -51,8 +58,7 @@ public class CurrencyService {
                     currency.setSign(rs.getString("sign"));
                     return currency;
                 } else {
-                    // Currency not found
-                    return null; // Or throw an exception if preferred
+                    throw new CurrencyNotFoundException(currencyCode);
                 }
             }
         }
@@ -62,7 +68,7 @@ public class CurrencyService {
         List<Currency> currencies = new ArrayList<>();
         String sql = "SELECT id, code, fullName, sign FROM currencies";
 
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             ResultSet rs = pstmt.executeQuery();

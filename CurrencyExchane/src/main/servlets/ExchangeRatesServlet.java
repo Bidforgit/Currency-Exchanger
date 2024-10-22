@@ -7,7 +7,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import main.exceptions.CurrencyNotFoundException;
 import main.services.ExchangeRateService;
+import main.utils.ErrorResponseUtil;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -32,9 +34,6 @@ public class ExchangeRatesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
         try {
             String json = objectMapper.writeValueAsString(exchangeRateService.getExchangeRateWithCurrencies());
             response.getWriter().write(json);
@@ -48,9 +47,6 @@ public class ExchangeRatesServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
         String baseCurrency = request.getParameter("baseCurrencyCode");
         String targetCurrency = request.getParameter("targetCurrencyCode");
         BigDecimal rate = BigDecimal.valueOf(Long.parseLong(request.getParameter("rate")));
@@ -60,7 +56,11 @@ public class ExchangeRatesServlet extends HttpServlet {
             response.getWriter().write(json);
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            ErrorResponseUtil.sendErrorResponse(response, "Ошибка базы данных: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        } catch (CurrencyNotFoundException e) {
+            ErrorResponseUtil.sendErrorResponse(response, "Валюта не найдена: " + e.getCurrencyCode(), HttpServletResponse.SC_BAD_REQUEST);
+        } catch (Exception e) {
+            ErrorResponseUtil.sendErrorResponse(response, "Произошла ошибка: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
 
     }

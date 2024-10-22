@@ -46,8 +46,6 @@ public class ExchangeRateServlet extends HttpServlet {
             throws ServletException, IOException {
         String pathInfo = request.getPathInfo();
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
         if (pathInfo == null || pathInfo.equals("/")) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Currency code is missing");
         } else {
@@ -63,8 +61,6 @@ public class ExchangeRateServlet extends HttpServlet {
     }
 
     protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        resp.setContentType("application/json");
-        resp.setCharacterEncoding("UTF-8");
 
         String pathInfo = req.getPathInfo();
         String rateStr = req.getParameter("rate");
@@ -85,7 +81,6 @@ public class ExchangeRateServlet extends HttpServlet {
 
                 String json = objectMapper.writeValueAsString(exchangeRateService.updateCurrencyRate(pathInfo, rate));
                 resp.getWriter().write(json);
-
 //            if (success) {
 //                resp.setStatus(HttpServletResponse.SC_OK);
 //                resp.getWriter().write("Currency pair updated successfully");

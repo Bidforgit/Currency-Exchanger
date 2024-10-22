@@ -1,7 +1,11 @@
 package main.services;
 
+import lombok.RequiredArgsConstructor;
 import main.DTO.ExchangeRateWithCurrencies;
 import main.DatabaseConfig;
+import main.exceptions.CurrencyNotFoundException;
+import main.exceptions.ExchangeRateAlreadyExistsException;
+import main.exceptions.ExchangeRateNotFoundException;
 import main.models.Currency;
 
 import java.math.BigDecimal;
@@ -13,9 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+@RequiredArgsConstructor
+
 public class ExchangeRateService {
 
     private DatabaseConfig db;
+    private final CurrencyService currencyService;
 
 //    private Connection connection;
 //
@@ -24,7 +31,7 @@ public class ExchangeRateService {
 //    }
 
     public ExchangeRateService() {
-
+        this.currencyService = new CurrencyService();
     }
 
     public ExchangeRateWithCurrencies getExchangeRateByCourse(String currencyPair) throws SQLException {
@@ -43,7 +50,7 @@ public class ExchangeRateService {
                 "WHERE base_currency_code = ? AND target_currency_code = ?";
         ExchangeRateWithCurrencies exchangeRateWithCurrencies = new ExchangeRateWithCurrencies();
 
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, baseCurrencyCode);
@@ -86,7 +93,7 @@ public class ExchangeRateService {
                 "JOIN currencies c2 ON er.TargetCurrencyId = c2.id ";
 
         List<ExchangeRateWithCurrencies> exchangeRateWithCurrenciesList = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             ResultSet rs = pstmt.executeQuery();
@@ -119,23 +126,23 @@ public class ExchangeRateService {
     }
 
     public ExchangeRateWithCurrencies insertExchangeRate(String baseCurrencyCode, String targetCurrencyCode, BigDecimal rate) throws SQLException {
-        try (Connection connection = DatabaseConfig.connect()) {
+        try (Connection connection = DatabaseConfig.getDataSource().getConnection()) {
             connection.setAutoCommit(false);
 
-            Currency baseCurrency = getCurrencyByCode(baseCurrencyCode);
-            Currency targetCurrency = getCurrencyByCode(targetCurrencyCode);
+            Currency baseCurrency = currencyService.getCurrencyByCode(baseCurrencyCode);
+            Currency targetCurrency = currencyService.getCurrencyByCode(targetCurrencyCode);
 
             if (baseCurrency == null) {
-                throw new SQLException("Base currency not found: " + baseCurrencyCode);
+                throw new CurrencyNotFoundException("Base currency not found: " + baseCurrencyCode);
             }
 
             if (targetCurrency == null) {
-                throw new SQLException("Target currency not found: " + targetCurrencyCode);
+                throw new CurrencyNotFoundException("Target currency not found: " + targetCurrencyCode);
             }
 
             // Check if the exchange rate already exists
             if (exchangeRateExists(baseCurrency.getId(), targetCurrency.getId())) {
-                throw new SQLException("Exchange rate for this currency pair already exists");
+                throw new ExchangeRateAlreadyExistsException("Exchange rate for this currency pair already exists");
             }
             ExchangeRateWithCurrencies exchangeRateWithCurrencies = new ExchangeRateWithCurrencies();
             String insertSql = "INSERT INTO ExchangeRates (BaseCurrencyId, TargetCurrencyId, rate) VALUES (?, ?, ?)";
@@ -170,27 +177,27 @@ public class ExchangeRateService {
         }
     }
 
-    private Currency getCurrencyByCode(String currencyCode) throws SQLException {
-        String query = "SELECT * FROM Currencies WHERE code = ?";
-        try (Connection conn = DatabaseConfig.connect();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setString(1, currencyCode);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                Currency currency = new Currency();
-                currency.setFullName(rs.getString("FullName"));
-                currency.setCode(rs.getString("Code"));
-                currency.setId(rs.getInt("id"));
-                currency.setSign(rs.getString("Sign"));
-                return currency;
-            }
-        }
-        return null;
-    }
+//    private Currency getCurrencyByCode(String currencyCode) throws SQLException {
+//        String query = "SELECT * FROM Currencies WHERE code = ?";
+//        try (Connection conn = DatabaseConfig.connect();
+//             PreparedStatement pstmt = conn.prepareStatement(query)) {
+//            pstmt.setString(1, currencyCode);
+//            ResultSet rs = pstmt.executeQuery();
+//            if (rs.next()) {
+//                Currency currency = new Currency();
+//                currency.setFullName(rs.getString("FullName"));
+//                currency.setCode(rs.getString("Code"));
+//                currency.setId(rs.getInt("id"));
+//                currency.setSign(rs.getString("Sign"));
+//                return currency;
+//            }
+//        }
+//        return null;
+//    }
 
     private Long getExchangeRateId(int baseCurrencyId, int targetCurrencyId) throws SQLException {
         String query = "SELECT id FROM ExchangeRates WHERE baseCurrencyId = ? AND targetCurrencyId = ?";
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, baseCurrencyId);
             pstmt.setInt(2, targetCurrencyId);
@@ -206,7 +213,7 @@ public class ExchangeRateService {
 
     private boolean exchangeRateExists(int baseCurrencyId, int targetCurrencyId) throws SQLException {
         String query = "SELECT 1 FROM ExchangeRates WHERE BaseCurrencyId = ? AND TargetCurrencyId = ?";
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, baseCurrencyId);
             pstmt.setInt(2, targetCurrencyId);
@@ -238,7 +245,7 @@ public class ExchangeRateService {
                 "JOIN currencies c2 ON er.TargetCurrencyId = c2.id " +
                 "WHERE c1.code = ? AND c2.code = ?";  // target -> base
 
-        try (Connection conn = DatabaseConfig.connect();
+        try (Connection conn = DatabaseConfig.getDataSource().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, baseCurrencyCode);
             pstmt.setString(2, targetCurrencyCode);
@@ -300,11 +307,11 @@ public class ExchangeRateService {
         String baseCurrencyCode = pathInfo.substring(0, 3);  // USD
         String targetCurrencyCode = pathInfo.substring(3, 6);  // KZT
 
-        try (Connection connection = DatabaseConfig.connect()) {
+        try (Connection connection = DatabaseConfig.getDataSource().getConnection()) {
             connection.setAutoCommit(false);
 
-            Currency baseCurrency = getCurrencyByCode(baseCurrencyCode);
-            Currency targetCurrency = getCurrencyByCode(targetCurrencyCode);
+            Currency baseCurrency = currencyService.getCurrencyByCode(baseCurrencyCode);
+            Currency targetCurrency = currencyService.getCurrencyByCode(targetCurrencyCode);
 
             if (baseCurrency == null) {
                 throw new SQLException("Base currency not found: " + baseCurrencyCode);

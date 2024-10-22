@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import main.services.CurrencyService;
+import main.utils.ErrorResponseUtil;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -31,14 +32,11 @@ public class CurrenciesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
         try {
             String json = objectMapper.writeValueAsString(currencyService.getAllCurrencies());
             response.getWriter().write(json);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            ErrorResponseUtil.sendErrorResponse(response, "Валют не существует.", HttpServletResponse.SC_BAD_REQUEST);
         }
 
     }
@@ -46,9 +44,6 @@ public class CurrenciesServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
 
         String name = request.getParameter("name");
         String code = request.getParameter("code");
@@ -58,9 +53,8 @@ public class CurrenciesServlet extends HttpServlet {
             String json = objectMapper.writeValueAsString(currencyService.insertCurrency(code, name, sign));
             response.getWriter().write(json);
 
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch ( SQLException e) {
+            ErrorResponseUtil.sendErrorResponse(response, "Валюта с кодом '" + code + "' уже существует.", HttpServletResponse.SC_BAD_REQUEST);
         }
-
     }
 }

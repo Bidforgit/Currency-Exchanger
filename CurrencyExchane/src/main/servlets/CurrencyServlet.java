@@ -8,7 +8,10 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import main.exceptions.CurrencyAlreadyExistsException;
+import main.exceptions.CurrencyNotFoundException;
 import main.services.CurrencyService;
+import main.utils.ErrorResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,6 +48,8 @@ public class CurrencyServlet extends HttpServlet {
             try {
                 String json = objectMapper.writeValueAsString(currencyService.getCurrencyByCode(currencyCode));
                 response.getWriter().write(json);
+            } catch (CurrencyNotFoundException e) {
+                ErrorResponseUtil.sendErrorResponse(response, "Валют не существует.", HttpServletResponse.SC_BAD_REQUEST);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
